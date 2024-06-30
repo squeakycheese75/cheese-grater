@@ -1,0 +1,6 @@
+.env
+.vscode/launch.json
+.DS_Store
+*.db
+gorm.db
+out/*
