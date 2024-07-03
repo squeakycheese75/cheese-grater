@@ -1,28 +1,44 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 
 	"github.com/squeakycheese75/cheese-grater/config"
-	"github.com/squeakycheese75/cheese-grater/internal/http/router"
+	"github.com/squeakycheese75/cheese-grater/internal/http/server"
+	"github.com/squeakycheese75/cheese-grater/logging"
 )
 
-func main() {
-	rootLogger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-	slog.SetDefault(rootLogger)
-
+func loadConfig() (*config.Config, error) {
 	slog.Debug("Loading config ...")
 	env := config.EnvSource{}
 	cfg, err := env.Load()
 	if err != nil {
-		panic(err)
+		return nil, err
+	}
+	return &cfg, nil
+}
+
+func run() error {
+	logging.SetupLogger()
+
+	cfg, err := loadConfig()
+	if err != nil {
+		slog.Error("Failed to load configuration", slog.String("error", err.Error()))
+		return err
 	}
 
-	slog.Info(fmt.Sprintf("Starting 'cheese-grater' on port: %d redirecting to: %v", cfg.ProxyPort, cfg.RedirectURL))
+	if err := server.Start(*cfg); err != nil {
+		slog.Error("Error starting server", slog.String("error", err.Error()))
+		return err
+	}
 
-	router.Route(cfg)
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		slog.Error("Application failed to start", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 }
