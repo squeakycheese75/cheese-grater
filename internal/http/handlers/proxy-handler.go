@@ -6,78 +6,65 @@ import (
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/squeakycheese75/cheese-grater/entities"
 )
 
-const (
-	RedirectURL          = "localhost:1234"
-	HeaderContentType    = "Content-Type"
-	HeaderXForwardedHost = "X-Forwarded-Host"
+func ProxyHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		redirectURL := r.Context().Value(entities.RedirectURL).(string)
 
-	ContentTypeJSON        = "application/json"
-	ContentTypeEventStream = "text/event-stream"
-)
+		reverseProxy := http.NewServeMux()
+		reverseProxy.Handle("/", http.StripPrefix("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			httpClient := &http.Client{
+				Timeout: 10 * time.Second,
+			}
 
-func ProxyHandler(w http.ResponseWriter, r *http.Request) {
+			r.URL.Host = redirectURL
+			r.URL.Scheme = "http"
+			r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
+			r.Host = redirectURL
 
-	reverseProxy := createReverseProxy(RedirectURL)
-	reverseProxy.ServeHTTP(w, r)
-}
+			for k, v := range r.Header {
+				log.Printf("Header field %q, Value %q\n", k, v)
+			}
 
-func createReverseProxy(target string) *http.ServeMux {
-	proxy := http.NewServeMux()
-	proxy.Handle("/", http.StripPrefix("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		proxyRequest(w, r, target)
-	})))
-	return proxy
-}
+			req, err := http.NewRequest(r.Method, r.URL.String(), r.Body)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Error creating request: %v", err), http.StatusInternalServerError)
+				return
+			}
 
-func proxyRequest(w http.ResponseWriter, r *http.Request, target string) {
-	httpClient := &http.Client{
-		Timeout: 30 * time.Second,
-	}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
 
-	r.URL.Host = target
-	r.URL.Scheme = "http"
-	r.Header.Set(HeaderXForwardedHost, r.Header.Get("Host"))
-	r.Host = target
+			resp, err := httpClient.Do(req)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("Error proxying request: %v", err), http.StatusBadGateway)
+				return
+			}
+			defer resp.Body.Close()
 
-	for k, v := range r.Header {
-		log.Printf("Header field %q, Value %q\n", k, v)
-	}
+			for key, values := range resp.Header {
+				for _, value := range values {
+					w.Header().Add(key, value)
+				}
+			}
 
-	req, err := http.NewRequest(r.Method, r.URL.String(), r.Body)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error creating request: %v", err), http.StatusInternalServerError)
-		return
-	}
+			if resp.Header.Get("Content-Type") == "text/event-stream" {
+				w.Header().Set("Content-Type", "text/event-stream")
+				w.Header().Set("Cache-Control", "no-cache")
+				w.Header().Set("Connection", "keep-alive")
+				w.WriteHeader(http.StatusOK)
+				w.(http.Flusher).Flush()
+			} else {
+				w.WriteHeader(resp.StatusCode)
+			}
 
-	req.Header.Set(HeaderContentType, ContentTypeJSON)
-	req.Header.Set(HeaderXForwardedHost, r.Header.Get("Host"))
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error proxying request: %v", err), http.StatusBadGateway)
-		return
-	}
-	defer resp.Body.Close()
-
-	for key, values := range resp.Header {
-		for _, value := range values {
-			w.Header().Add(key, value)
-		}
-	}
-
-	if resp.Header.Get(HeaderContentType) == ContentTypeEventStream {
-		w.Header().Set(HeaderContentType, ContentTypeEventStream)
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
-		w.WriteHeader(http.StatusOK)
-		w.(http.Flusher).Flush()
-	} else {
-		w.WriteHeader(resp.StatusCode)
-	}
-
-	if _, err := io.Copy(w, resp.Body); err != nil {
-		log.Printf("Error streaming response body: %v", err)
+			if _, err := io.Copy(w, resp.Body); err != nil {
+				log.Printf("Error streaming response body: %v", err)
+			}
+		})))
+		reverseProxy.ServeHTTP(w, r)
 	}
 }

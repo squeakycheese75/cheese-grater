@@ -1,10 +1,12 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
 	"github.com/squeakycheese75/cheese-grater/config"
+	"github.com/squeakycheese75/cheese-grater/entities"
 )
 
 const (
@@ -28,7 +30,11 @@ func AuthWithAPIKey(next http.Handler, cfg config.Config) http.Handler {
 			return
 		}
 
-		next.ServeHTTP(w, r)
+		ctxRedirectURL := context.WithValue(r.Context(), entities.RedirectURL, cfg.RedirectURL)
+
+		rWithRedirectURL := r.WithContext(ctxRedirectURL)
+
+		next.ServeHTTP(w, rWithRedirectURL)
 	})
 }
 

@@ -8,10 +8,11 @@ import (
 
 	"github.com/lithammer/shortuuid/v4"
 	"github.com/squeakycheese75/cheese-grater/config"
-	"github.com/squeakycheese75/cheese-grater/internal/http/router"
+	"github.com/squeakycheese75/cheese-grater/internal/http/server"
+	"github.com/squeakycheese75/cheese-grater/logging"
 )
 
-func main() {
+func run() error {
 	var (
 		redirectURL string
 		port        int
@@ -35,26 +36,35 @@ func main() {
 
 	if *help {
 		flag.Usage()
-		return
+		return nil
 	}
 
 	if apiKey == uid {
 		generatedAPIKey = true
 	}
 
-	rootLogger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-	slog.SetDefault(rootLogger)
+	logging.SetupLogger()
 
-	slog.Info(fmt.Sprintf("Starting 'cheese-grater' on port: %d redirecting to: %v", port, redirectURL))
 	if generatedAPIKey {
 		slog.Info(fmt.Sprintf("Generated Password '%v', you will need to copy this into the 'Cursor settings - Models - OpenAI key'", apiKey))
 	}
-
-	router.Route(config.Config{
+	cfg := config.Config{
 		ProxyPort:   port,
 		RedirectURL: redirectURL,
 		APIKey:      apiKey,
-	})
+	}
+
+	if err := server.Start(cfg); err != nil {
+		slog.Error("Error starting server", slog.String("error", err.Error()))
+		return err
+	}
+
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		slog.Error("Application failed to start", slog.String("error", err.Error()))
+		os.Exit(1) // exit with a non-zero status
+	}
 }
