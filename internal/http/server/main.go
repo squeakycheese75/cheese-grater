@@ -13,12 +13,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/squeakycheese75/cheese-grater/config"
 	"github.com/squeakycheese75/cheese-grater/internal/http/middleware"
-	"github.com/squeakycheese75/cheese-grater/internal/http/router"
+	"github.com/squeakycheese75/cheese-grater/internal/http/mux"
 )
 
 func Start(cfg config.Config) error {
 	slog.Info("Starting cheese-grater...")
-	err := router.NewRouter(cfg)
+	mux, err := mux.NewRouter(cfg)
 	if err != nil {
 		slog.Error(errors.Wrap(err, "server start error").Error())
 		return err
@@ -27,7 +27,7 @@ func Start(cfg config.Config) error {
 	serverAddress := fmt.Sprintf(":%d", cfg.ProxyPort)
 	server := &http.Server{
 		Addr:    serverAddress,
-		Handler: middleware.LoggingMiddleware(http.DefaultServeMux),
+		Handler: middleware.LoggingMiddleware(mux),
 	}
 
 	go func() {
