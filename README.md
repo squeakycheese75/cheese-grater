@@ -23,9 +23,11 @@ Currently, you'll need [GO](https://go.dev/doc/install) installed.
     go build
     ```
 
-## Install the Cli and run via the command line:
+## Install the ClI and run via the command line:
 
-TODO:  I've done the cli but not yet set-up releasing the binaries.
+- Go to the [Releases](https://github.com/squeakycheese75/cheese-grater/releases) section on GitHub.
+- Download the relevant binary for your platform, extract and run.
+- If you want me to add a build for youR plaform, just raise an Issue   [Supported builds](https://golang.org/doc/install/source#environment)
 
 
 ### Usage - Run with go
@@ -40,7 +42,7 @@ TODO:  I've done the cli but not yet set-up releasing the binaries.
 - RedirectURL: The URL of the backend server to which requests will be forwarded (default: localhost:1234).
 - ProxyPort:  What port to run this app on.
 
-### Usage - Cli
+### Usage - Platform CLI
 
 Run the Cheese Grater application with the following command-line flags:
 
