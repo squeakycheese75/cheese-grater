@@ -25,7 +25,7 @@ Currently, you'll need [GO](https://go.dev/doc/install) installed.
 
 ## Install the Cli and run via the command line:
 
-TODO:  I've done the cli but not yet set=up releasing the binaries.
+TODO:  I've done the cli but not yet set-up releasing the binaries.
 
 
 ### Usage - Run with go
@@ -53,6 +53,11 @@ Run the Cheese Grater application with the following command-line flags:
 - Port: The port on which the Cheese Grater proxy will run (default: 8080).
 - APIKey: The API key for authentication (default: generated at runtime).
 - help: Display help information about command-line flags.
+
+
+## How to connect Cursor to your local LLM.
+
+Writing the article now...
 
 ## License
 This project is licensed under the GNU License. See the LICENSE file for details.
