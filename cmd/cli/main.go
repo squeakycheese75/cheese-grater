@@ -1,3 +1,4 @@
+// Package main starts the CLI for cheese-grater.
 package main
 
 import (
@@ -6,7 +7,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/lithammer/shortuuid/v4"
+	shortuuid "github.com/lithammer/shortuuid/v4"
 	"github.com/squeakycheese75/cheese-grater/config"
 	"github.com/squeakycheese75/cheese-grater/internal/http/server"
 	"github.com/squeakycheese75/cheese-grater/logging"
@@ -28,7 +29,9 @@ func run() error {
 	generatedAPIKey := false
 
 	flag.Usage = func() {
-		fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [options]\n", os.Args[0])
+		if _, err := fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [options]\n", os.Args[0]); err != nil {
+			slog.Warn("Failed to print usage message", slog.String("error", err.Error()))
+		}
 		flag.PrintDefaults()
 	}
 

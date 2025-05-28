@@ -12,7 +12,7 @@ build-executables:
 	./build-executables.sh 1
 
 lint:
-	golangci-lint version && golangci-lint run --verbose  -E  misspell    
+	golangci-lint run ./...
 
 test:
 	go test ./... -v
