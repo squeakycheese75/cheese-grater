@@ -1,11 +1,11 @@
 module github.com/squeakycheese75/cheese-grater
 
-go 1.22.5
+go 1.24
 
 require (
 	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/lithammer/shortuuid/v4 v4.0.0
+	github.com/lithammer/shortuuid/v4 v4.2.0
 )
 
 require (

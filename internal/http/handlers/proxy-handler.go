@@ -12,7 +12,12 @@ import (
 
 func ProxyHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		redirectURL := r.Context().Value(entities.RedirectURL).(string)
+		val := r.Context().Value(entities.RedirectURL)
+		redirectURL, ok := val.(string)
+		if !ok || redirectURL == "" {
+			http.Error(w, "missing redirect URL in context", http.StatusInternalServerError)
+			return
+		}
 
 		reverseProxy := http.NewServeMux()
 		reverseProxy.Handle("/", http.StripPrefix("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -26,6 +31,8 @@ func ProxyHandler() http.HandlerFunc {
 			r.Host = redirectURL
 
 			for k, v := range r.Header {
+				// strip headers
+				// req.Header[k] = v
 				log.Printf("Header field %q, Value %q\n", k, v)
 			}
 
@@ -35,6 +42,7 @@ func ProxyHandler() http.HandlerFunc {
 				return
 			}
 
+			// Intentionally stripping original headers and setting only required ones
 			req.Header.Set("Content-Type", "application/json")
 			req.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
 
@@ -43,7 +51,11 @@ func ProxyHandler() http.HandlerFunc {
 				http.Error(w, fmt.Sprintf("Error proxying request: %v", err), http.StatusBadGateway)
 				return
 			}
-			defer resp.Body.Close()
+			defer func() {
+				if cerr := resp.Body.Close(); cerr != nil {
+					log.Printf("error closing response body: %v", cerr)
+				}
+			}()
 
 			for key, values := range resp.Header {
 				for _, value := range values {
